@@ -1,5 +1,5 @@
-// Popup script to handle model detection and search functionality
-document.addEventListener('DOMContentLoaded', function() {
+// Popup script to handle model detection, exclusive check, and search functionality
+document.addEventListener('DOMContentLoaded', function () {
   const loadingDiv = document.getElementById('loading');
   const resultDiv = document.getElementById('result');
   const noModelDiv = document.getElementById('noModel');
@@ -7,19 +7,64 @@ document.addEventListener('DOMContentLoaded', function() {
   const searchButton = document.getElementById('searchButton');
   const exclusiveMessage = document.getElementById('exclusiveMessage');
   const exclusiveText = document.getElementById('exclusiveText');
+  const body = document.body;
 
-  // Get the current active tab
-  chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+  // Exclusive brand lists
+  const mitre10ExclusiveBrands = [
+    'Number 8', 'Jobmate', 'Nouveau', 'Gardeners Edge'
+  ];
+
+  const bunningsExclusiveBrands = [
+    'Baracuda', 'Citeco', 'Click', 'Craftright', 'DETA',
+    'Full Boar', 'Gerni', 'Hy-Clor', 'Jumbuck', 'Mondella',
+    'Ozito', 'Pinnacle Hardware', 'Ryobi', 'Saxon', 'Tradie',
+    'Trojan', 'Marquee', 'Arlec', 'Happy Tails'
+  ];
+
+  // Function to check exclusivity for a retailer
+  function checkIfExclusive(make, model, retailer) {
+    if (!make && !model) return false;
+
+    const makeLower = (make || '').toLowerCase();
+    const modelLower = (model || '').toLowerCase();
+    const list = retailer === 'mitre10' ? mitre10ExclusiveBrands : bunningsExclusiveBrands;
+
+    return list.some(brand => {
+      const brandLower = brand.toLowerCase();
+      return makeLower.includes(brandLower) || modelLower.includes(brandLower);
+    });
+  }
+
+  // Function to get exclusive brand message
+  function getExclusiveMessage(make, retailer) {
+    const brandName = make || 'This product';
+    const retailerName = retailer === 'mitre10' ? 'Mitre10' : 'Bunnings';
+    return `${brandName} is exclusive to ${retailerName} and can only be purchased there.`;
+  }
+
+  // Get current active tab once
+  chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
     const currentTab = tabs[0];
-    
-    // Check if we're on a supported site (Mitre10 or Bunnings)
-    if (!currentTab.url.includes('mitre10.co.nz') && !currentTab.url.includes('bunnings.co.nz')) {
+    const url = currentTab.url || '';
+    let retailer = '';
+
+    // Set popup background color & retailer
+    if (url.includes('mitre10.co.nz')) {
+      body.style.backgroundColor = '#ff6d00';
+      retailer = 'mitre10';
+    } else if (url.includes('bunnings.co.nz')) {
+      body.style.backgroundColor = '#0d5257';
+      retailer = 'bunnings';
+    }
+
+    // Check if we're on a supported site
+    if (!retailer) {
       showNoModel('Please navigate to a Mitre10 or Bunnings product page');
       return;
     }
 
-    // Send message to content script to get make and model
-    chrome.tabs.sendMessage(currentTab.id, { action: 'getMakeAndModel' }, function(response) {
+    // Ask content script for make & model
+    chrome.tabs.sendMessage(currentTab.id, { action: 'getMakeAndModel' }, function (response) {
       if (chrome.runtime.lastError) {
         console.error('Error communicating with content script:', chrome.runtime.lastError);
         showNoModel('Error: Please refresh the page and try again');
@@ -27,57 +72,49 @@ document.addEventListener('DOMContentLoaded', function() {
       }
 
       if (response && response.result) {
-        showResult(response.result);
+        const data = response.result;
+        data.isExclusive = checkIfExclusive(data.make, data.model, retailer);
+        if (data.isExclusive) {
+          data.exclusiveMessage = getExclusiveMessage(data.make, retailer);
+        }
+        showResult(data);
       } else {
         showNoModel();
       }
     });
   });
 
-  // Function to display the detected model
+  // Display the detected model
   function showResult(data) {
     loadingDiv.style.display = 'none';
     resultDiv.style.display = 'block';
-    
-    // Display the search term (make + model or just model)
     modelNumberDiv.textContent = data.searchTerm || data.model || 'Unknown';
-    
-    // Check if this is an exclusive brand (only applies to Mitre10)
+
     if (data.isExclusive) {
-      // Show exclusive message
       exclusiveMessage.style.display = 'block';
-      if (data.exclusiveMessage) {
-        exclusiveText.textContent = data.exclusiveMessage;
-      }
-      
-      // Disable search button
+      exclusiveText.textContent = data.exclusiveMessage || '';
       searchButton.disabled = true;
       searchButton.textContent = 'Search Disabled - Home Brand';
-      
       console.log('Home brand found:', data.exclusiveMessage);
     } else {
-      // Enable search functionality for non-exclusive products
       exclusiveMessage.style.display = 'none';
       searchButton.disabled = false;
-      
-    searchButton.textContent = 'Search Google for Make & Model';   
-      
-      // Add click handler for Google search
-      searchButton.addEventListener('click', function() {
+      searchButton.textContent = 'Search Google for Make & Model';
+      searchButton.addEventListener('click', function () {
         const searchTerm = data.searchTerm || data.model;
         if (searchTerm) {
-          const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchTerm + '')}`;
-          chrome.tabs.create({ url: googleUrl });
+          chrome.tabs.create({
+            url: `https://www.google.com/search?q=${encodeURIComponent(searchTerm)}`
+          });
         }
       });
     }
   }
 
-  // Function to show no model found state
+  // No model found state
   function showNoModel(customMessage = null) {
     loadingDiv.style.display = 'none';
     noModelDiv.style.display = 'block';
-    
     if (customMessage) {
       const noModelDisplay = noModelDiv.querySelector('.model-display');
       if (noModelDisplay) {

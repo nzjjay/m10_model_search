@@ -1,9 +1,28 @@
 // ===== Shared Data =====
 const exclusiveBrands = {
   mitre10: ['Number 8', 'Jobmate', 'Nouveau'],
-  bunnings: ['Ozito', 'Craftright'] // Example — add real exclusive brands here
+  bunnings: [
+    'Baracuda',
+    'Citeco',
+    'Click',
+    'Craftright',
+    'DETA',
+    'Full Boar',
+    'Gerni',
+    'Hy-Clor',
+    'Jumbuck',
+    'Mondella',
+    'Ozito',
+    'Pinnacle Hardware',
+    'Ryobi',
+    'Saxon',
+    'Tradie',
+    'Trojan',
+    'Marquee',
+    'Arlec',
+    'Happy Tails'
+  ]
 };
-
 // ===== Shared Functions =====
 function getExclusiveInfo(make, model, retailer) {
   const brands = (exclusiveBrands[retailer.toLowerCase()] || []).map(b => b.toLowerCase());
