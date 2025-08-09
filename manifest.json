@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Model Number Extractor for Mitre10",
+  "name": "Model Number Extractor for Mitre10 and Bunnings",
   "version": "1.0",
   "description": "Extract model numbers and Google search them to see if there is a better price",
   "permissions": [
@@ -9,13 +9,15 @@
   ],
   "host_permissions": [
     "https://*.mitre10.co.nz/*",
-    "https://*.mitre10trade.co.nz/*"
+    "https://*.mitre10trade.co.nz/*",
+    "https://*.bunnings.co.nz/*"
   ],
   "content_scripts": [
     {
       "matches": [
         "https://*.mitre10.co.nz/*",
-        "https://*.mitre10trade.co.nz/*"
+        "https://*.mitre10trade.co.nz/*",
+        "https://*.bunnings.co.nz/*"
       ],
       "js": ["content.js"]
     }

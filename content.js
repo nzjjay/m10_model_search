@@ -1,187 +1,148 @@
-// Content script to extract make and model from Mitre10 pages
+// ===== Shared Data =====
+const exclusiveBrands = {
+  mitre10: ['Number 8', 'Jobmate', 'Nouveau'],
+  bunnings: ['Ozito', 'Craftright'] // Example — add real exclusive brands here
+};
+
+// ===== Shared Functions =====
+function getExclusiveInfo(make, model, retailer) {
+  const brands = (exclusiveBrands[retailer.toLowerCase()] || []).map(b => b.toLowerCase());
+  const makeLower = make?.toLowerCase() || '';
+  const modelLower = model?.toLowerCase() || '';
+
+  const matchedBrand = brands.find(brand =>
+    makeLower.includes(brand) || modelLower.includes(brand)
+  );
+
+  if (matchedBrand) {
+    const brandName = make || 'This product';
+    return {
+      isExclusive: true,
+      message: `${capitalize(matchedBrand)} can only be purchased at ${retailer}.`
+    };
+  }
+
+  return { isExclusive: false, message: null };
+}
+
+function buildResult(make, model, retailer) {
+  const { isExclusive, message } = getExclusiveInfo(make, model, retailer);
+
+  return {
+    make: make || null,
+    model: model || null,
+    searchTerm: [make, model].filter(Boolean).join(' ') || '',
+    isExclusive,
+    exclusiveMessage: message,
+    retailer
+  };
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// ===== Main Extractor =====
 function extractMakeAndModel() {
-  // Check if we're on a Mitre10 site
-  if (!window.location.hostname.includes('mitre10.co.nz')) {
-    return null;
+  const hostname = window.location.hostname;
+
+  if (hostname.includes('mitre10.co.nz')) {
+    return extractMitre10MakeAndModel();
   }
-
-  let make = null;
-  let model = null;
-
-  // Method 1: Extract from the product header (brand and model shown separately)
-  // Look for brand in product name section
-  const brandElement = document.querySelector('.product--brand');
-  if (brandElement) {
-    make = brandElement.textContent.trim();
+  if (hostname.includes('bunnings.co.nz')) {
+    return extractBunningsMakeAndModel();
   }
-
-  // Look for model in product identifiers section
-  const modelElements = document.querySelectorAll('.product--model-number');
-  for (const element of modelElements) {
-    const text = element.textContent.trim();
-    // Extract model after "MODEL:" or "M:" prefix
-    const modelMatch = text.match(/(?:MODEL|M):\s*(.+)/i);
-    if (modelMatch && modelMatch[1]) {
-      model = modelMatch[1].trim();
-    }
-  }
-
-  // Method 2: Extract from specifications section (.spec-item structure)
-  const specItems = document.querySelectorAll('.spec-item');
-  
-  for (const item of specItems) {
-    const attrDiv = item.querySelector('.attr');
-    const valueDiv = item.querySelector('.value');
-    
-    if (attrDiv && valueDiv) {
-      const attrText = attrDiv.textContent.trim().toLowerCase();
-      const valueText = valueDiv.textContent.trim();
-      
-      // Look for brand/make
-      if ((attrText.includes('brand') || attrText.includes('manufacturer')) && !make) {
-        make = valueText;
-      }
-      
-      // Look for model number
-      if (attrText.includes('model number') && !model) {
-        model = valueText;
-      }
-    }
-  }
-
-  // Method 3: Fallback - try to extract from page title if brand/model not found
-  if (!make || !model) {
-    const titleElement = document.querySelector('h1.product--name, .product--title');
-    if (titleElement) {
-      const titleText = titleElement.textContent.trim();
-      
-      // Try to extract brand from title if not found
-      if (!make) {
-        // Common brand patterns at start of product titles
-        const brandMatch = titleText.match(/^([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+/);
-        if (brandMatch && brandMatch[1]) {
-          make = brandMatch[1].trim();
-        }
-      }
-    }
-  }
-
-  // Clean up the extracted values
-  if (make) {
-    make = make.replace(/[^\w\s]/g, '').trim(); // Remove special characters
-  }
-  
-  if (model) {
-    model = model.replace(/[^\w\s-]/g, '').trim(); // Keep hyphens for model numbers
-  }
-
-  // Check if this is a Mitre10 exclusive brand
-  const isExclusive = checkIfMitre10Exclusive(make, model);
-
-  // Return both make and model if found
-  if (make && model) {
-    return {
-      make: make,
-      model: model,
-      searchTerm: `${make} ${model}`,
-      isExclusive: isExclusive,
-      exclusiveMessage: isExclusive ? getMitre10ExclusiveMessage(make, model) : null
-    };
-  } else if (model) {
-    // If only model found, still return it
-    return {
-      make: null,
-      model: model,
-      searchTerm: model,
-      isExclusive: isExclusive,
-      exclusiveMessage: isExclusive ? getMitre10ExclusiveMessage(make, model) : null
-    };
-  }
-
   return null;
 }
 
-// Function to check if a brand/model is Mitre10 exclusive
-function checkIfMitre10Exclusive(make, model) {
-  if (!make && !model) return false;
-  
-  // Check for Number 8 brand (case insensitive)
-  if (make && make.toLowerCase().includes('number 8')) {
-    return true;
+// ===== Extractors =====
+function extractBunningsMakeAndModel() {
+  let make = document.querySelector('[data-locator="product-brand-name"]')?.textContent.trim() || null;
+  let model = null;
+
+  try {
+    const nextData = document.querySelector('#__NEXT_DATA__');
+    if (nextData) {
+      const pageData = JSON.parse(nextData.textContent);
+      const productQuery = pageData?.props?.pageProps?.dehydratedState?.queries
+        ?.find(q => q.queryKey?.[0] === 'retail-product');
+      const modelFeature = productQuery?.state?.data?.classifications?.[0]?.features
+        ?.find(f => f.code === 'modelNumber');
+      model = modelFeature?.featureValues?.[0]?.value || null;
+    }
+  } catch (e) {
+    console.log('Could not extract model from Next.js data, trying DOM fallback');
   }
-  
-  // Check for Number 8 in model name
-  if (model && model.toLowerCase().includes('number 8')) {
-    return true;
+
+  if (!model) {
+    document.querySelectorAll('dt').forEach(dt => {
+      if (dt.textContent.trim().toLowerCase() === 'model number') {
+        model = dt.nextElementSibling?.textContent.trim() || null;
+      }
+    });
   }
-  
-  // Add other Mitre10 exclusive brands here as needed
-  const mitre10ExclusiveBrands = [
-    'Number 8',
-    'Jobmate',
-    'Nouveau'
-  ];
-  
-  if (make) {
-    const makeLower = make.toLowerCase();
-    return mitre10ExclusiveBrands.some(brand => makeLower.includes(brand));
-  }
-  
-  return false;
+
+  make = make?.replace(/[^\w\s]/g, '').trim() || null;
+  model = model?.replace(/[^\w\s-]/g, '').trim() || null;
+
+  return buildResult(make, model, 'Bunnings');
 }
 
-// Function to get the exclusive message
-function getMitre10ExclusiveMessage(make, model) {
-  const brandName = make || 'This product';
-  
-  if ((make && make.toLowerCase().includes('number 8')) || 
-      (model && model.toLowerCase().includes('number 8'))) {
-    return `${brandName} is a Mitre10 exclusive brand and can only be purchased at Mitre10.`;
+function extractMitre10MakeAndModel() {
+  let make = document.querySelector('.product--brand')?.textContent.trim() || null;
+  let model = null;
+
+  document.querySelectorAll('.product--model-number').forEach(el => {
+    const match = el.textContent.trim().match(/(?:MODEL|M):\s*(.+)/i);
+    if (match) model = match[1].trim();
+  });
+
+  document.querySelectorAll('.spec-item').forEach(item => {
+    const attr = item.querySelector('.attr')?.textContent.trim().toLowerCase();
+    const val = item.querySelector('.value')?.textContent.trim();
+    if (!make && attr && (attr.includes('brand') || attr.includes('manufacturer'))) make = val;
+    if (!model && attr?.includes('model number')) model = val;
+  });
+
+  if (!make || !model) {
+    const titleText = document.querySelector('h1.product--name, .product--title')?.textContent.trim() || '';
+    if (!make) {
+      const brandMatch = titleText.match(/^([A-Za-z]+(?:\s+[A-Za-z]+)?)\s+/);
+      if (brandMatch) make = brandMatch[1].trim();
+    }
   }
-  
-  return `${brandName} is exclusive to Mitre10 and can only be purchased at Mitre10 stores.`;
+
+  make = make?.replace(/[^\w\s]/g, '').trim() || null;
+  model = model?.replace(/[^\w\s-]/g, '').trim() || null;
+
+  return buildResult(make, model, 'Mitre10');
 }
 
-// Store the extracted make and model
+// ===== Store & Messaging =====
 function storeMakeAndModel() {
   const result = extractMakeAndModel();
   if (result) {
     document.documentElement.setAttribute('data-make-model', JSON.stringify(result));
     console.log('Make and model extracted:', result);
-    
-    // Log if exclusive brand detected
-    if (result.isExclusive) {
-      console.log('Mitre10 exclusive brand detected:', result.exclusiveMessage);
-    }
+    if (result.isExclusive) console.log(`${result.retailer} exclusive brand detected:`, result.exclusiveMessage);
   } else {
     console.log('No make/model found on this page');
   }
 }
 
-// Run extraction when page loads
 storeMakeAndModel();
-
-// Also run after delays in case content loads dynamically
 setTimeout(storeMakeAndModel, 1000);
 setTimeout(storeMakeAndModel, 3000);
 
-// Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'getMakeAndModel') {
     const stored = document.documentElement.getAttribute('data-make-model');
     let result = null;
-    
-    if (stored) {
-      try {
-        result = JSON.parse(stored);
-      } catch (e) {
-        // If parsing fails, try extracting again
-        result = extractMakeAndModel();
-      }
-    } else {
+    try {
+      result = stored ? JSON.parse(stored) : extractMakeAndModel();
+    } catch {
       result = extractMakeAndModel();
     }
-    
-    sendResponse({ result: result });
+    sendResponse({ result });
   }
 });

@@ -12,9 +12,9 @@ document.addEventListener('DOMContentLoaded', function() {
   chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
     const currentTab = tabs[0];
     
-    // Check if we're on a Mitre10 site
-    if (!currentTab.url.includes('mitre10.co.nz')) {
-      showNoModel('Please navigate to a Mitre10 product page');
+    // Check if we're on a supported site (Mitre10 or Bunnings)
+    if (!currentTab.url.includes('mitre10.co.nz') && !currentTab.url.includes('bunnings.co.nz')) {
+      showNoModel('Please navigate to a Mitre10 or Bunnings product page');
       return;
     }
 
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Display the search term (make + model or just model)
     modelNumberDiv.textContent = data.searchTerm || data.model || 'Unknown';
     
-    // Check if this is an exclusive brand
+    // Check if this is an exclusive brand (only applies to Mitre10)
     if (data.isExclusive) {
       // Show exclusive message
       exclusiveMessage.style.display = 'block';
@@ -52,19 +52,21 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Disable search button
       searchButton.disabled = true;
-      searchButton.textContent = 'Search Disabled - Mitre10 Exclusive';
+      searchButton.textContent = 'Search Disabled - Home Brand';
       
-      console.log('Mitre10 exclusive product detected:', data.exclusiveMessage);
+      console.log('Home brand found:', data.exclusiveMessage);
     } else {
       // Enable search functionality for non-exclusive products
       exclusiveMessage.style.display = 'none';
       searchButton.disabled = false;
       
+    searchButton.textContent = 'Search Google for Make & Model';   
+      
       // Add click handler for Google search
       searchButton.addEventListener('click', function() {
         const searchTerm = data.searchTerm || data.model;
         if (searchTerm) {
-          const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchTerm + ' price')}`;
+          const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(searchTerm + '')}`;
           chrome.tabs.create({ url: googleUrl });
         }
       });
@@ -78,7 +80,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (customMessage) {
       const noModelDisplay = noModelDiv.querySelector('.model-display');
-      noModelDisplay.textContent = customMessage;
+      if (noModelDisplay) {
+        noModelDisplay.textContent = customMessage;
+      }
     }
   }
 });
