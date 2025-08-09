@@ -68,6 +68,22 @@
       text-align: center;
     }
     
+    .exclusive-notice {
+      background: rgba(255, 235, 59, 0.2);
+      border: 1px solid rgba(255, 235, 59, 0.4);
+      border-left: 4px solid #ffeb3b;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 12px;
+    }
+    
+    .exclusive-notice strong {
+      color: #ffeb3b;
+      display: block;
+      margin-bottom: 4px;
+    }
+    
     .search-button {
       width: 100%;
       padding: 12px;
@@ -96,6 +112,13 @@
     .search-button:disabled {
       background: #666;
       cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+      font-size: 12px;
+    }
+    
+    .search-button:disabled:hover {
+      background: #666;
       transform: none;
       box-shadow: none;
     }
@@ -133,7 +156,7 @@
 <body>
   <div class="header">
     <h1>Model finder for Mitre10</h1>
-    <p>Find a cheaper price on an exact stocked item via the model number to make Mitre10 beat it by 15%</p>
+    <p>Find a cheaper price on an exact stocked item via the model number and ask Mitre10 to beat it by 15%</p>
   </div>
   
   <div class="content">
@@ -146,6 +169,11 @@
       <div class="model-section">
         <div class="label">Detected Model Number:</div>
         <div id="modelNumber" class="model-display"></div>
+      </div>
+      
+      <div id="exclusiveMessage" class="exclusive-notice" style="display: none;">
+        <strong>⚠️ Mitre10 Exclusive Brand</strong>
+        <span id="exclusiveText">This product can only be purchased at Mitre10.</span>
       </div>
       
       <button id="searchButton" class="search-button">

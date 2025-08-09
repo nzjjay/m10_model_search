@@ -75,23 +75,71 @@ function extractMakeAndModel() {
     model = model.replace(/[^\w\s-]/g, '').trim(); // Keep hyphens for model numbers
   }
 
+  // Check if this is a Mitre10 exclusive brand
+  const isExclusive = checkIfMitre10Exclusive(make, model);
+
   // Return both make and model if found
   if (make && model) {
     return {
       make: make,
       model: model,
-      searchTerm: `${make} ${model}`
+      searchTerm: `${make} ${model}`,
+      isExclusive: isExclusive,
+      exclusiveMessage: isExclusive ? getMitre10ExclusiveMessage(make, model) : null
     };
   } else if (model) {
     // If only model found, still return it
     return {
       make: null,
       model: model,
-      searchTerm: model
+      searchTerm: model,
+      isExclusive: isExclusive,
+      exclusiveMessage: isExclusive ? getMitre10ExclusiveMessage(make, model) : null
     };
   }
 
   return null;
+}
+
+// Function to check if a brand/model is Mitre10 exclusive
+function checkIfMitre10Exclusive(make, model) {
+  if (!make && !model) return false;
+  
+  // Check for Number 8 brand (case insensitive)
+  if (make && make.toLowerCase().includes('number 8')) {
+    return true;
+  }
+  
+  // Check for Number 8 in model name
+  if (model && model.toLowerCase().includes('number 8')) {
+    return true;
+  }
+  
+  // Add other Mitre10 exclusive brands here as needed
+  const mitre10ExclusiveBrands = [
+    'Number 8',
+    'Jobmate',
+    'Nouveau'
+  ];
+  
+  if (make) {
+    const makeLower = make.toLowerCase();
+    return mitre10ExclusiveBrands.some(brand => makeLower.includes(brand));
+  }
+  
+  return false;
+}
+
+// Function to get the exclusive message
+function getMitre10ExclusiveMessage(make, model) {
+  const brandName = make || 'This product';
+  
+  if ((make && make.toLowerCase().includes('number 8')) || 
+      (model && model.toLowerCase().includes('number 8'))) {
+    return `${brandName} is a Mitre10 exclusive brand and can only be purchased at Mitre10.`;
+  }
+  
+  return `${brandName} is exclusive to Mitre10 and can only be purchased at Mitre10 stores.`;
 }
 
 // Store the extracted make and model
@@ -100,6 +148,11 @@ function storeMakeAndModel() {
   if (result) {
     document.documentElement.setAttribute('data-make-model', JSON.stringify(result));
     console.log('Make and model extracted:', result);
+    
+    // Log if exclusive brand detected
+    if (result.isExclusive) {
+      console.log('Mitre10 exclusive brand detected:', result.exclusiveMessage);
+    }
   } else {
     console.log('No make/model found on this page');
   }
