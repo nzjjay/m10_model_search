@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #ff6d00 0%, #ff6d00 100%);
+      color: white;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      margin: 0 0 5px 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .header p {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+    
+    .content {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 15px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .model-section {
+      margin-bottom: 15px;
+    }
+    
+    .label {
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0.8;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .model-display {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      word-break: break-all;
+    }
+    
+    .no-model {
+      color: #ffeb3b;
+      font-style: italic;
+      text-align: center;
+    }
+    
+    .search-button {
+      width: 100%;
+      padding: 12px;
+      background: #ff5722;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .search-button:hover {
+      background: #e64a19;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .search-button:active {
+      transform: translateY(0);
+    }
+    
+    .search-button:disabled {
+      background: #666;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .spinner {
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top: 2px solid white;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .footer {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.2);
+      font-size: 11px;
+      opacity: 0.6;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Model finder for Mitre10</h1>
+    <p>Find a cheaper price on an exact stocked item via the model number to make Mitre10 beat it by 15%</p>
+  </div>
+  
+  <div class="content">
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Scanning for model number...</p>
+    </div>
+    
+    <div id="result" style="display: none;">
+      <div class="model-section">
+        <div class="label">Detected Model Number:</div>
+        <div id="modelNumber" class="model-display"></div>
+      </div>
+      
+      <button id="searchButton" class="search-button">
+        Google Search
+      </button>
+    </div>
+    
+    <div id="noModel" style="display: none;">
+      <div class="model-display no-model">
+        No model number detected on this page
+      </div>
+      <p style="font-size: 12px; opacity: 0.8; margin-top: 10px; text-align: center;">
+        Make sure you're on a product page with model numbers
+      </p>
+    </div>
+  </div>
+  
+  <div class="footer">
+    Navigate to any product page to extract model numbers
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

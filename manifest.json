@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Model Number Extractor for Mitre10",
+  "version": "1.0",
+  "description": "Extract model numbers and Google search them to see if there is a better price",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://*.mitre10.co.nz/*",
+    "https://*.mitre10trade.co.nz/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.mitre10.co.nz/*",
+        "https://*.mitre10trade.co.nz/*"
+      ],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Google search for model number"
+  }
+}
